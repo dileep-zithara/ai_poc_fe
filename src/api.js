@@ -38,15 +38,6 @@ export async function importAdCatalog(file) {
   return res.json();
 }
 
-export async function syncAdCatalogFromProd(limit) {
-  const res = await fetch(`${API_BASE}/ad-catalog/sync-from-prod`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ limit }),
-  });
-  return res.json();
-}
-
 export async function searchAdCatalog(query, offset = 0) {
   const res = await fetch(`${API_BASE}/ad-catalog?q=${encodeURIComponent(query)}&offset=${offset}&limit=25`);
   return res.json();
@@ -113,11 +104,25 @@ export async function listWebSources() {
 }
 
 export async function addWebSource(url, pageLimit) {
-  const res = await fetch(`${API_BASE}/web-sources`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url, pageLimit }),
-  });
+  try {
+    const res = await fetch(`${API_BASE}/web-sources`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, pageLimit }),
+    });
+    if (res.status === 504) {
+      return { error: "The gateway timed out. Fetch now runs in the background — refresh this page in a minute." };
+    }
+    const data = await res.json();
+    if (!res.ok && !data?.id) return { error: data.error || `Request failed (${res.status})` };
+    return data;
+  } catch (err) {
+    return { error: err.message || "Could not reach the API." };
+  }
+}
+
+export async function getWebSource(id) {
+  const res = await fetch(`${API_BASE}/web-sources/${id}`);
   return res.json();
 }
 
@@ -140,13 +145,19 @@ export async function saveBusinessProfile(payload) {
 }
 
 export async function importBusinessProfileFromWebsite(url, pageLimit) {
-  const res = await fetch(`${API_BASE}/business-profile/import-from-website`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url, pageLimit }),
-  });
-  const body = await res.json();
-  return { ...body, status: body.status || (res.status === 202 ? "running" : undefined) };
+  try {
+    const res = await fetch(`${API_BASE}/business-profile/import-from-website`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, pageLimit }),
+    });
+    if (res.status === 504) {
+      return { error: "The gateway timed out while reading the website. Try again, or raise Nginx proxy_read_timeout to 300s." };
+    }
+    return res.json();
+  } catch (err) {
+    return { error: err.message || "Could not reach the API." };
+  }
 }
 
 export async function getAgentSettings() {
