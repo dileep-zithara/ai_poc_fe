@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Globe2, Link2, Radar } from "lucide-react";
-import { listWebSources, addWebSource, deleteWebSource } from "../api.js";
+import { listWebSources, addWebSource, deleteWebSource, getWebSource } from "../api.js";
 import PageHeader from "./PageHeader.jsx";
 
 const SUGGESTED = [
@@ -21,19 +21,44 @@ export default function WebSourcesTab() {
 
   async function fetchSite() {
     if (!url.trim()) return;
+    const already = sources.find((s) => s.url.replace(/\/$/, "") === url.trim().replace(/\/$/, "") && s.status === "done");
+    if (already) {
+      setHelp(`This site is already indexed (${already.pagesFetched} pages). You do not need to fetch it again.`);
+      return;
+    }
     setFetching(true);
     setError("");
-    setHelp("Fetching pages and indexing useful copy…");
+    setHelp("Started fetch — pages are indexed in the background…");
     const result = await addWebSource(url.trim(), pageLimit);
-    if (result.error) {
+    if (result.error && !result.id) {
       setError(result.error);
       setHelp("");
-    } else {
-      setHelp(`Added ${result.pagesFetched || pageLimit} page(s).`);
-      setUrl("");
+      setFetching(false);
+      refresh();
+      return;
     }
-    setFetching(false);
     refresh();
+    const id = result.id;
+    for (let i = 0; i < 90; i += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const row = id ? await getWebSource(id).catch(() => null) : null;
+      refresh();
+      if (row?.status === "done") {
+        setHelp(`Added ${row.pagesFetched} page(s).`);
+        setUrl("");
+        setFetching(false);
+        return;
+      }
+      if (row?.status === "failed") {
+        setError(row.error || "Fetch failed.");
+        setHelp("");
+        setFetching(false);
+        return;
+      }
+      setHelp(`Fetching pages… ${row?.pagesFetched ? `${row.pagesFetched} so far` : "this can take a minute"}`);
+    }
+    setHelp("Still fetching on the server. You can leave this page — refresh later to see the result.");
+    setFetching(false);
   }
 
   async function remove(id) {
@@ -100,7 +125,7 @@ export default function WebSourcesTab() {
             <div className="document-row-title">{s.url}</div>
             <div className="field-hint">
               {s.status === "done" && <span className="badge badge-ok">{s.pagesFetched} page(s) indexed</span>}
-              {s.status === "pending" && <span className="badge badge-muted">pending…</span>}
+              {s.status === "pending" && <span className="badge badge-muted">fetching pages…</span>}
               {s.status === "failed" && <span className="badge badge-danger">failed — {s.error}</span>}
             </div>
           </div>
