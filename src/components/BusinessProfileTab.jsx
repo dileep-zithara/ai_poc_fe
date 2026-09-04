@@ -9,7 +9,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import { addWebSource, getBusinessProfile, saveBusinessProfile, importBusinessProfileFromWebsite } from "../api.js";
+import { getBusinessProfile, saveBusinessProfile, importBusinessProfileFromWebsite } from "../api.js";
 import PageHeader from "./PageHeader.jsx";
 import LoadingState from "./LoadingState.jsx";
 
@@ -127,6 +127,12 @@ export default function BusinessProfileTab() {
     getBusinessProfile().then((row) => {
       setProfile(row);
       if (row?.website) setWebsite(row.website);
+      if (row?.importJob?.pages) setPages(row.importJob.pages);
+      if (row?.importJob?.status === "running") {
+        setImporting(true);
+        setImportMsg("Import still running…");
+        pollImport();
+      }
     });
   }, []);
 
@@ -135,21 +141,54 @@ export default function BusinessProfileTab() {
   const policies = useMemo(() => (profile ? policyCards(profile.policies) : []), [profile]);
   const socials = useMemo(() => (profile ? socialItems(profile.socialLinks) : []), [profile]);
 
+  async function pollImport() {
+    const deadline = Date.now() + 6 * 60 * 1000;
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      try {
+        const row = await getBusinessProfile();
+        const job = row.importJob || {};
+        if (job.pagesFetched) {
+          setImportMsg(`Read ${job.pagesFetched} page${job.pagesFetched === 1 ? "" : "s"} so far…`);
+        }
+        if (job.status === "done") {
+          setProfile(row);
+          setPages(job.pages || []);
+          setImportMsg(`Fetched ${job.pagesFetched} pages. Check the store cards below.`);
+          setImporting(false);
+          return;
+        }
+        if (job.status === "failed") {
+          setImportMsg(`Could not fetch the site: ${job.error || "import failed"}`);
+          setImporting(false);
+          return;
+        }
+      } catch {
+        // Transient poll failures should not abort a running import.
+      }
+    }
+    setImportMsg("Import is still running in the background. Refresh in a minute to see the result.");
+    setImporting(false);
+  }
+
   async function fetchEverything() {
     const url = website.trim() || "https://tyaani.com";
     setImporting(true);
-    setImportMsg("Reading stores, hours, WhatsApp, and policies from the site…");
-    const result = await importBusinessProfileFromWebsite(url, 60);
-    if (result.error) {
-      setImportMsg(`Could not fetch the site: ${result.error}`);
+    setImportMsg("Starting website import…");
+    try {
+      const start = await importBusinessProfileFromWebsite(url, 25);
+      if (start.error && start.status !== "running") {
+        setImportMsg(`Could not fetch the site: ${start.error}`);
+        setImporting(false);
+        return;
+      }
+      if (start.profile) setProfile(start.profile);
+      setImportMsg("Reading stores, hours, WhatsApp, and policies from the site…");
+      await pollImport();
+    } catch (err) {
+      setImportMsg(`Could not reach the API: ${err.message}`);
       setImporting(false);
-      return;
     }
-    setProfile({ ...result.profile, website: url });
-    setPages(result.pages || []);
-    addWebSource(url, 40).catch(() => {});
-    setImportMsg(`Fetched ${result.pagesFetched} pages. Check the store cards below.`);
-    setImporting(false);
   }
 
   async function saveField(key, value) {

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, CheckCircle2, Link2, Megaphone, Plus, Search, X } from "lucide-react";
-import { listAdContexts, createAdContext, deleteAdContext, importAdCatalog, searchAdCatalog, getAdCatalogCount, searchCatalog, searchLiveAds } from "../api.js";
+import { listAdContexts, createAdContext, deleteAdContext, importAdCatalog, syncAdCatalogFromProd, searchAdCatalog, getAdCatalogCount, searchCatalog, searchLiveAds } from "../api.js";
 import AdDetailsView from "./AdDetailsView.jsx";
 import PageHeader from "./PageHeader.jsx";
 
@@ -151,6 +151,22 @@ export default function AdContextTab() {
     refreshCatalogCount();
     loadCatalog();
     e.target.value = "";
+  }
+
+  async function fetchLiveAds() {
+    setImporting(true);
+    setImportMsg("Fetching live ads from the server…");
+    try {
+      const result = await syncAdCatalogFromProd();
+      setImportMsg(result.error
+        ? `Error: ${result.error}`
+        : `Fetched ${result.imported} live ads from zithara_prod.`);
+      refreshCatalogCount();
+      loadCatalog();
+    } catch (err) {
+      setImportMsg(`Could not reach the API: ${err.message}`);
+    }
+    setImporting(false);
   }
 
   async function save() {
@@ -305,13 +321,18 @@ export default function AdContextTab() {
         <div className="ad-import-copy">
           <div className="ad-catalog-title">Ad catalog</div>
           <div className="field-hint">
-            {catalogCount > 0 ? `${catalogCount} ads imported — searchable below.` : "No ads imported yet — upload your Meta ad performance export (JSON) to search real ads instead of typing IDs blind."}
+            {catalogCount > 0 ? `${catalogCount} ads imported — searchable below.` : "Fetch live ads from the server, or upload a Meta ads JSON export."}
           </div>
         </div>
-        <label className="btn btn-secondary btn-sm">
-          {importing ? "Importing…" : "Import ads JSON"}
-          <input className="visually-hidden" type="file" accept=".json" onChange={importCatalog} />
-        </label>
+        <div className="fetch-bar-actions">
+          <button className="btn btn-primary btn-sm" type="button" onClick={fetchLiveAds} disabled={importing}>
+            {importing ? "Fetching…" : "Fetch live ads"}
+          </button>
+          <label className="btn btn-secondary btn-sm">
+            Import JSON
+            <input className="visually-hidden" type="file" accept=".json" onChange={importCatalog} />
+          </label>
+        </div>
       </div>
       {importMsg && <div className="status-banner info import-status">{importMsg}</div>}
 

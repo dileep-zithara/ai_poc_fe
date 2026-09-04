@@ -38,6 +38,15 @@ export async function importAdCatalog(file) {
   return res.json();
 }
 
+export async function syncAdCatalogFromProd(limit) {
+  const res = await fetch(`${API_BASE}/ad-catalog/sync-from-prod`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ limit }),
+  });
+  return res.json();
+}
+
 export async function searchAdCatalog(query, offset = 0) {
   const res = await fetch(`${API_BASE}/ad-catalog?q=${encodeURIComponent(query)}&offset=${offset}&limit=25`);
   return res.json();
@@ -136,7 +145,8 @@ export async function importBusinessProfileFromWebsite(url, pageLimit) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ url, pageLimit }),
   });
-  return res.json();
+  const body = await res.json();
+  return { ...body, status: body.status || (res.status === 202 ? "running" : undefined) };
 }
 
 export async function getAgentSettings() {
