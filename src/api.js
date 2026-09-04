@@ -38,6 +38,11 @@ export async function importAdCatalog(file) {
   return res.json();
 }
 
+export async function syncAdCatalogFromProd() {
+  const res = await fetch(`${API_BASE}/catalog/ads?q=`);
+  return res.json();
+}
+
 export async function searchAdCatalog(query, offset = 0) {
   const res = await fetch(`${API_BASE}/ad-catalog?q=${encodeURIComponent(query)}&offset=${offset}&limit=25`);
   return res.json();
