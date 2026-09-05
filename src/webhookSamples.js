@@ -5,6 +5,7 @@ export const WEBHOOK_SAMPLES = [
     channel: "whatsapp",
     json: {
       from: "919348033310",
+      profile: { name: "Riya" },
       id: "wamid.SAMPLE",
       timestamp: "1788490000",
       type: "text",
@@ -165,7 +166,7 @@ export const WEBHOOK_SAMPLES = [
       entry: [{
         id: "PAGE_ID",
         messaging: [{
-          sender: { id: "PSID_123" },
+          sender: { id: "PSID_123", name: "Meera" },
           recipient: { id: "PAGE_ID" },
           timestamp: 1788498695057,
           message: {

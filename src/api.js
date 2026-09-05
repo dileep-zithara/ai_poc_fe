@@ -58,11 +58,11 @@ export async function getAdCatalogEntry(adId) {
   return res.json();
 }
 
-export async function sendChat(sessionId, message, adId, cardId, channel, attachment, referral, customerPhone, webhook) {
+export async function sendChat(sessionId, message, adId, cardId, channel, attachment, referral, customerPhone, webhook, customerName) {
   const res = await fetch(`${API_BASE}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sessionId, message, adId, cardId, channel, attachment, referral, customerPhone, webhook }),
+    body: JSON.stringify({ sessionId, message, adId, cardId, channel, attachment, referral, customerPhone, customerName, webhook }),
   });
   return res.json();
 }

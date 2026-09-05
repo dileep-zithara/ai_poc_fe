@@ -9,7 +9,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import { getBusinessProfile, saveBusinessProfile, importBusinessProfileFromWebsite } from "../api.js";
+import { addWebSource, getBusinessProfile, saveBusinessProfile, importBusinessProfileFromWebsite } from "../api.js";
 import PageHeader from "./PageHeader.jsx";
 import LoadingState from "./LoadingState.jsx";
 
@@ -17,32 +17,37 @@ function lines(value) {
   return String(value || "").split(/\n+/).map((line) => line.trim()).filter(Boolean);
 }
 
+function cityKey(city) {
+  return String(city || "").split(",")[0].trim().toLowerCase();
+}
+
 function fuzzyGet(map, city) {
-  const key = city.split(",")[0].trim().toLowerCase();
+  const key = cityKey(city);
   if (map[key]) return map[key];
-  const aliases = {
-    bandra: ["bandra", "mumbai"],
-    mehrauli: ["delhi", "new delhi"],
-    "jubilee hills": ["hyderabad"],
-    "dickenson road": ["bangalore", "bengaluru"],
-    hazratganj: ["lucknow"],
-    "kalyani nagar": ["pune"],
-    "sector 17c": ["chandigarh"],
-  };
-  for (const [from, to] of Object.entries(aliases)) {
-    if (key.includes(from)) {
-      for (const name of to) if (map[name]) return map[name];
-    }
-  }
-  const hit = Object.keys(map).find((name) => key.includes(name) || name.includes(key));
+  const hit = Object.keys(map).find((name) => {
+    const parts = name.split(/[,/]| and /i).map((p) => p.trim()).filter(Boolean);
+    if (parts.length > 1) return parts.some((part) => key.includes(part) || part.includes(key));
+    return key === name || (name.length > 3 && (key.includes(name) || name.includes(key)));
+  });
   return hit ? map[hit] : "";
+}
+
+function hoursLooksMashed(text) {
+  const labels = String(text || "").match(/[A-Za-z][A-Za-z\s]{2,24}:/g) || [];
+  return /;/.test(text || "") && labels.length >= 2;
 }
 
 function parseHours(profile) {
   const map = {};
-  for (const line of lines(profile.supportHours)) {
-    const match = line.match(/^([^:]+):\s*(.+)$/);
-    if (match) map[match[1].trim().toLowerCase()] = match[2].trim();
+  const raw = String(profile.supportHours || "").replace(/\n+/g, "; ");
+  const chunks = raw.split(/;\s*/).map((part) => part.trim()).filter(Boolean);
+  for (const chunk of chunks) {
+    const match = chunk.match(/^([A-Za-z][A-Za-z\s,/]+):\s*(.+)$/);
+    if (!match) continue;
+    const cities = match[1].split(/[,/]| and /i).map((c) => c.trim().toLowerCase()).filter(Boolean);
+    const hours = match[2].trim();
+    if (hoursLooksMashed(hours)) continue;
+    for (const city of cities) map[city] = hours;
   }
   return map;
 }
@@ -71,10 +76,11 @@ function parseStores(profile) {
     const idx = line.indexOf(":");
     const city = (idx === -1 ? line : line.slice(0, idx)).trim();
     const address = (idx === -1 ? "" : line.slice(idx + 1)).trim();
+    const parsedHours = fuzzyGet(hours, city);
     return {
       city,
       address,
-      hours: fuzzyGet(hours, city),
+      hours: hoursLooksMashed(parsedHours) ? "" : parsedHours,
       whatsapp: fuzzyGet(whatsapp, city),
     };
   }).filter((row) => row.city);

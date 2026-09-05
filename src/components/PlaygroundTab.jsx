@@ -137,8 +137,10 @@ export default function PlaygroundTab() {
   const [liveAds, setLiveAds] = useState(true);
   const [channel, setChannel] = useState("web");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [customerName, setCustomerName] = useState("");
   const [session, setSession] = useState(null);
   const [attachment, setAttachment] = useState(null);
+  const [mobilePane, setMobilePane] = useState("chat");
   const [showJsonModal, setShowJsonModal] = useState(false);
   const [jsonInput, setJsonInput] = useState(() => prettySample(WEBHOOK_SAMPLES[0]));
   const [jsonSampleId, setJsonSampleId] = useState(WEBHOOK_SAMPLES[0].id);
@@ -232,6 +234,7 @@ export default function PlaygroundTab() {
     if (!parsed) return;
     if (parsed.channel) setChannel(parsed.channel);
     if (parsed.phone) setCustomerPhone(parsed.phone);
+    if (parsed.customerName) setCustomerName(parsed.customerName);
     if (parsed.referral?.adId) {
       setSelectedAd({
         adId: parsed.referral.adId,
@@ -263,7 +266,7 @@ export default function PlaygroundTab() {
     setMessages((m) => [...m, { role: "user", content: userMsg, channel, attachment }]);
     setInput("");
     setLoading(true);
-    const data = await sendChat(sessionId, userMsg, selectedAd?.adId, selectedAd?.mapping?.cardId, channel, attachment, undefined, customerPhone.trim() || undefined);
+    const data = await sendChat(sessionId, userMsg, selectedAd?.adId, selectedAd?.mapping?.cardId, channel, attachment, undefined, customerPhone.trim() || undefined, undefined, customerName.trim() || undefined);
     if (data.session) setSession(data.session);
     setAttachment(null);
     const reply = assistantMessage(data);
@@ -326,7 +329,16 @@ export default function PlaygroundTab() {
         </button>
       </header>
 
-      <div className="playground-layout">
+      <div className="playground-mobile-nav" role="tablist" aria-label="Playground views">
+        <button type="button" role="tab" aria-selected={mobilePane === "chat"} className={mobilePane === "chat" ? "active" : ""} onClick={() => setMobilePane("chat")}>
+          Chat
+        </button>
+        <button type="button" role="tab" aria-selected={mobilePane === "context"} className={mobilePane === "context" ? "active" : ""} onClick={() => setMobilePane("context")}>
+          Ad context
+        </button>
+      </div>
+
+      <div className={`playground-layout is-${mobilePane}`}>
         <section className="playground-col card">
           <div className="playground-col-head">
             <span className="surface-icon"><MessageSquareText size={16} /></span>
@@ -490,6 +502,10 @@ export default function PlaygroundTab() {
             </div>
           </div>
 
+          <div className="context-block">
+            <label className="field-label">Customer name</label>
+            <input className="input" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Riya" />
+          </div>
           <div className="context-block">
             <label className="field-label">{channel === "whatsapp" ? "WhatsApp number" : "Phone on file"}</label>
             <input className="input" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="Optional" />
