@@ -15,7 +15,7 @@ Companion API: [`ai_poc_be`](https://github.com/dileep-zithara/ai_poc_be).
 ```bash
 cd ai_poc_fe
 npm install
-cp .env.example .env
+# optional: create a local .env with VITE_API_BASE — do not commit it
 npm run dev
 ```
 

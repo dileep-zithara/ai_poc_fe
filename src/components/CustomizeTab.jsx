@@ -80,6 +80,19 @@ export default function CustomizeTab() {
       />
 
       <div className="card customize-card">
+        <h3>Agent</h3>
+        <label className="field-label">Name</label>
+        <input className="input" value={settings.agentName || ""} onChange={(e) => set("agentName", e.target.value)} placeholder="Tyaani" />
+        <label className="field-label">Gender for speech</label>
+        <select className="input" value={settings.agentGender || "female"} onChange={(e) => set("agentGender", e.target.value)}>
+          <option value="female">Female</option>
+          <option value="male">Male</option>
+          <option value="neutral">Neutral</option>
+        </select>
+        <p className="field-hint">Used in any language the customer writes — Hindi, Telugu, Kannada, Tamil, French, and others — so first-person forms match the agent.</p>
+      </div>
+
+      <div className="card customize-card">
         <h3>Replies</h3>
         <ToggleRow
           label="AI replies"

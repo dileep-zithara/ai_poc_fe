@@ -92,30 +92,42 @@ function ChatText({ text }) {
   );
 }
 
+function ProductCard({ product }) {
+  const [broken, setBroken] = useState(false);
+  const showImage = product.imageUrl && !broken;
+  return (
+    <article className="product-card" role="listitem">
+      <div className="product-card-media">
+        {showImage
+          ? <img src={product.imageUrl} alt="" onError={() => setBroken(true)} />
+          : <div className="product-card-fallback"><Sparkles size={18} /></div>}
+      </div>
+      <div className="product-card-body">
+        <strong>{product.name}</strong>
+        <div className="product-card-meta">
+          {product.category && <small>{product.category}</small>}
+          {product.price != null && product.price !== "" && (
+            <span className="product-card-price">{formatPrice(product.price)}</span>
+          )}
+        </div>
+        {product.url ? (
+          <a className="product-card-link" href={product.url} target="_blank" rel="noreferrer">
+            View details <ExternalLink size={11} />
+          </a>
+        ) : (
+          <small>Link unavailable</small>
+        )}
+      </div>
+    </article>
+  );
+}
+
 function ProductCarousel({ products }) {
   if (!products?.length) return null;
   return (
     <div className="product-carousel" role="list">
       {products.map((product, index) => (
-        <article key={`${product.name}-${index}`} className="product-card" role="listitem">
-          <div className="product-card-media">
-            {product.imageUrl
-              ? <img src={product.imageUrl} alt="" />
-              : <div className="product-card-fallback"><Sparkles size={18} /></div>}
-          </div>
-          <div className="product-card-body">
-            <strong>{product.name}</strong>
-            {product.category && <small>{product.category}</small>}
-            {product.price != null && product.price !== "" && (
-              <span className="product-card-price">{formatPrice(product.price)}</span>
-            )}
-            {product.url && (
-              <a className="product-card-link" href={product.url} target="_blank" rel="noreferrer">
-                View details <ExternalLink size={11} />
-              </a>
-            )}
-          </div>
-        </article>
+        <ProductCard key={`${product.name}-${index}`} product={product} />
       ))}
     </div>
   );
@@ -347,6 +359,11 @@ export default function PlaygroundTab() {
               <p>Customer chat</p>
             </div>
           </div>
+          <select className="input playground-channel-select" value={channel} onChange={(e) => setChannel(e.target.value)} aria-label="Conversation channel">
+            {CHANNELS.map((c) => (
+              <option key={c.id} value={c.id}>{c.label}</option>
+            ))}
+          </select>
           <div className="channel-tabs" role="group" aria-label="Conversation channel">
             {CHANNELS.map((c) => (
               <button key={c.id} className={`channel-tab${channel === c.id ? " active" : ""}`} onClick={() => setChannel(c.id)}>
@@ -354,6 +371,13 @@ export default function PlaygroundTab() {
               </button>
             ))}
           </div>
+          {(session?.budgetMin || session?.budgetMax) && (
+            <div className="session-budget-chip">
+              Budget {session.budgetMin ? `₹${Number(session.budgetMin).toLocaleString("en-IN")}` : "—"}
+              {" – "}
+              {session.budgetMax ? `₹${Number(session.budgetMax).toLocaleString("en-IN")}` : "—"}
+            </div>
+          )}
           <div className="chat-box">
             {messages.length === 0 && (
               <div className="chat-empty">
@@ -398,10 +422,10 @@ export default function PlaygroundTab() {
             </button>
             <input ref={fileInputRef} className="visually-hidden" type="file" accept="image/*,video/*,audio/*" onChange={onAttach} />
             <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder="Type a customer message..." className="input" />
-            <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setJsonError(""); setShowJsonModal(true); }}>
+            <button onClick={send} disabled={loading} className="btn btn-primary send-circle" aria-label="Send"><Send size={15} /></button>
+            <button type="button" className="text-link composer-json-link" onClick={() => { setJsonError(""); setShowJsonModal(true); }}>
               Send JSON
             </button>
-            <button onClick={send} disabled={loading} className="btn btn-primary send-circle" aria-label="Send"><Send size={15} /></button>
           </div>
         </section>
 

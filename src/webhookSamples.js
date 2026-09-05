@@ -6,7 +6,8 @@ export const WEBHOOK_SAMPLES = [
     json: {
       from: "919348033310",
       profile: { name: "Riya" },
-      id: "wamid.SAMPLE",
+      id: "wamid.HBgMOTE5MzQ4MDMzMzEwFQIAEhgUM0FCQ0RFRjAxMjM0NTY3ODk",
+      wmaid: "wamid.HBgMOTE5MzQ4MDMzMzEwFQIAEhgUM0FCQ0RFRjAxMjM0NTY3ODk",
       timestamp: "1788490000",
       type: "text",
       text: { body: "I'd like to know the price of a design" },
@@ -37,7 +38,8 @@ export const WEBHOOK_SAMPLES = [
             contacts: [{ profile: { name: "Riya" }, wa_id: "919348033310" }],
             messages: [{
               from: "919348033310",
-              id: "wamid.WABA",
+              id: "wamid.HBgMOTE5MzQ4MDMzMzEwFQIAEhgUM0FCQ0RFRjAxMjM0NTY3ODk",
+              wmaid: "wamid.HBgMOTE5MzQ4MDMzMzEwFQIAEhgUM0FCQ0RFRjAxMjM0NTY3ODk",
               timestamp: "1788490000",
               type: "text",
               text: { body: "pp" },
@@ -62,7 +64,8 @@ export const WEBHOOK_SAMPLES = [
     channel: "whatsapp",
     json: {
       from: "918600419655",
-      id: "wamid.SAMPLE_IMAGE",
+      id: "wamid.HBgMOTE4NjAwNDE5NjU1FQIAEhggSU1BR0VSRUZBQkNERUYwMTI",
+      wmaid: "wamid.HBgMOTE4NjAwNDE5NjU1FQIAEhggSU1BR0VSRUZBQkNERUYwMTI",
       timestamp: "1788496741",
       type: "image",
       image: { mime_type: "image/jpeg", caption: "Is this available?", id: "3597411143744285" },
