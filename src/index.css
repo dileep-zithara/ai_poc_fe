@@ -791,6 +791,8 @@ a.info-chip:hover { background: var(--color-accent); }
 .chat-kb { font-size: 12px; margin-top: 6px; color: var(--color-text-muted); }
 .chat-kb-item { font-size: 11px; color: #777; margin-top: 2px; }
 .chat-attachment { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 6px; padding: 5px 9px; border-radius: 999px; background: #fff; border: 1px solid var(--color-border); font-size: 12px; color: var(--color-text-muted); }
+.chat-media-preview { display: block; max-width: min(220px, 70%); max-height: 180px; margin: 0 0 8px auto; border-radius: 12px; object-fit: cover; border: 1px solid var(--color-border); }
+.chat-nudge-label { font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: 4px; }
 .typing-bubble { display: inline-flex; align-items: center; gap: 5px; }
 .typing-dot { width: 6px; height: 6px; border-radius: 50%; background: #b7a8a0; animation: bounce 1s infinite; }
 .typing-dot:nth-child(2) { animation-delay: .15s; }

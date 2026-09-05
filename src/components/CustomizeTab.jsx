@@ -109,6 +109,7 @@ export default function CustomizeTab() {
           checked={settings.aiNudgeEnabled}
           onChange={(v) => set("aiNudgeEnabled", v)}
         />
+        <p className="field-hint">Playground sends this follow-up automatically after the delay (default 2 minutes). WhatsApp still needs the connector to send the same message live.</p>
       </div>
 
       <div className="page-actions">

@@ -67,6 +67,15 @@ export async function sendChat(sessionId, message, adId, cardId, channel, attach
   return res.json();
 }
 
+export async function sendFollowUp(sessionId) {
+  const res = await fetch(`${API_BASE}/chat/follow-up`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sessionId }),
+  });
+  return res.json();
+}
+
 export async function resetChat(sessionId) {
   await fetch(`${API_BASE}/chat/reset`, {
     method: "POST",

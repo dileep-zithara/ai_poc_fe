@@ -1,10 +1,14 @@
+/** Test customer WhatsApp only — never the Tyaani business line. */
+export const TEST_CUSTOMER_WHATSAPP = "917275724262";
+export const TYAANI_BUSINESS_WHATSAPP = "919619587978";
+
 export const WEBHOOK_SAMPLES = [
   {
     id: "wa-text-ad",
     label: "WhatsApp · text + ad referral",
     channel: "whatsapp",
     json: {
-      from: "919348033310",
+      from: "917275724262",
       profile: { name: "Riya" },
       id: "wamid.HBgMOTE5MzQ4MDMzMzEwFQIAEhgUM0FCQ0RFRjAxMjM0NTY3ODk",
       wmaid: "wamid.HBgMOTE5MzQ4MDMzMzEwFQIAEhgUM0FCQ0RFRjAxMjM0NTY3ODk",
@@ -34,10 +38,10 @@ export const WEBHOOK_SAMPLES = [
         changes: [{
           value: {
             messaging_product: "whatsapp",
-            metadata: { display_phone_number: "15550001111", phone_number_id: "123" },
-            contacts: [{ profile: { name: "Riya" }, wa_id: "919348033310" }],
+            metadata: { display_phone_number: TYAANI_BUSINESS_WHATSAPP, phone_number_id: "123" },
+            contacts: [{ profile: { name: "Riya" }, wa_id: "917275724262" }],
             messages: [{
-              from: "919348033310",
+              from: "917275724262",
               id: "wamid.HBgMOTE5MzQ4MDMzMzEwFQIAEhgUM0FCQ0RFRjAxMjM0NTY3ODk",
               wmaid: "wamid.HBgMOTE5MzQ4MDMzMzEwFQIAEhgUM0FCQ0RFRjAxMjM0NTY3ODk",
               timestamp: "1788490000",
@@ -63,7 +67,7 @@ export const WEBHOOK_SAMPLES = [
     label: "WhatsApp · image + ad referral",
     channel: "whatsapp",
     json: {
-      from: "918600419655",
+      from: "917275724262",
       id: "wamid.HBgMOTE4NjAwNDE5NjU1FQIAEhggSU1BR0VSRUZBQkNERUYwMTI",
       wmaid: "wamid.HBgMOTE4NjAwNDE5NjU1FQIAEhggSU1BR0VSRUZBQkNERUYwMTI",
       timestamp: "1788496741",

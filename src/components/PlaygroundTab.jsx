@@ -9,7 +9,7 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { sendChat, resetChat, listAdContexts, searchAdCatalog, listLiveAdSets, searchLiveAds, getSavedAdSets, saveAdSets } from "../api.js";
+import { sendChat, sendFollowUp, resetChat, getAgentSettings, listAdContexts, searchAdCatalog, listLiveAdSets, searchLiveAds, getSavedAdSets, saveAdSets } from "../api.js";
 import { WEBHOOK_SAMPLES, prettySample } from "../webhookSamples.js";
 
 function newSessionId() {
@@ -28,6 +28,34 @@ function attachmentTypeFor(file) {
   if (file.type.startsWith("video/")) return "video";
   if (file.type.startsWith("audio/")) return "audio";
   return null;
+}
+
+function readAttachment(file) {
+  return new Promise((resolve, reject) => {
+    const type = attachmentTypeFor(file);
+    if (!type) {
+      reject(new Error("Only image, video, or audio files are supported."));
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      reject(new Error("File is too large (max 8 MB)."));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Could not read that file."));
+    reader.onload = () => {
+      const previewUrl = String(reader.result || "");
+      const match = previewUrl.match(/^data:([^;]+);base64,(.+)$/);
+      resolve({
+        type,
+        name: file.name,
+        mimeType: match?.[1] || file.type,
+        data: match?.[2] || "",
+        previewUrl: type === "image" ? previewUrl : null,
+      });
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 function shortName(name) {
@@ -148,7 +176,7 @@ export default function PlaygroundTab() {
   const [selectedAdSets, setSelectedAdSets] = useState(() => getSavedAdSets());
   const [liveAds, setLiveAds] = useState(true);
   const [channel, setChannel] = useState("web");
-  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("7275724262");
   const [customerName, setCustomerName] = useState("");
   const [session, setSession] = useState(null);
   const [attachment, setAttachment] = useState(null);
@@ -160,9 +188,21 @@ export default function PlaygroundTab() {
   const bottomRef = useRef(null);
   const fileInputRef = useRef(null);
   const adSearchTimer = useRef(null);
+  const nudgeTimer = useRef(null);
+  const sessionIdRef = useRef(sessionId);
+  const [nudgeMinutes, setNudgeMinutes] = useState(2);
+  const [nudgeOn, setNudgeOn] = useState(true);
 
+  useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
   useEffect(() => { listAdContexts().then(setAdContexts); }, []);
+  useEffect(() => {
+    getAgentSettings().then((row) => {
+      if (row?.nudgeDelayMinutes) setNudgeMinutes(Number(row.nudgeDelayMinutes) || 2);
+      if (row?.aiNudgeEnabled === false) setNudgeOn(false);
+    }).catch(() => {});
+  }, []);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  useEffect(() => () => { if (nudgeTimer.current) clearTimeout(nudgeTimer.current); }, []);
   useEffect(() => {
     listLiveAdSets(adSetQuery).then((result) => setAdSets(result.items || [])).catch(() => setAdSets([]));
   }, [adSetQuery]);
@@ -223,16 +263,39 @@ export default function PlaygroundTab() {
     setAdSearch("");
   }
 
-  function onAttach(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    const type = attachmentTypeFor(file);
-    if (!type) {
-      alert("Only image, video, or audio files are supported.");
-    } else {
-      setAttachment({ type, name: file.name });
+  function clearNudgeTimer() {
+    if (nudgeTimer.current) {
+      clearTimeout(nudgeTimer.current);
+      nudgeTimer.current = null;
     }
+  }
+
+  function scheduleNudge() {
+    clearNudgeTimer();
+    if (!nudgeOn) return;
+    const waitMs = Math.max(Number(nudgeMinutes) || 2, 1) * 60 * 1000;
+    const sid = sessionIdRef.current;
+    nudgeTimer.current = setTimeout(async () => {
+      try {
+        const data = await sendFollowUp(sid);
+        if (data?.message && sid === sessionIdRef.current) {
+          setMessages((m) => [...m, { role: "assistant", content: data.message, nudge: true }]);
+        }
+      } catch {
+        // playground follow-up is best-effort
+      }
+    }, waitMs);
+  }
+
+  async function onAttach(e) {
+    const file = e.target.files[0];
     e.target.value = "";
+    if (!file) return;
+    try {
+      setAttachment(await readAttachment(file));
+    } catch (err) {
+      alert(err.message || "Could not attach that file.");
+    }
   }
 
   function loadSample(id) {
@@ -275,15 +338,19 @@ export default function PlaygroundTab() {
   async function send() {
     if (!input.trim() && !attachment) return;
     const userMsg = input.trim();
-    setMessages((m) => [...m, { role: "user", content: userMsg, channel, attachment }]);
+    const media = attachment;
+    clearNudgeTimer();
+    setMessages((m) => [...m, { role: "user", content: userMsg, channel, attachment: media }]);
     setInput("");
-    setLoading(true);
-    const data = await sendChat(sessionId, userMsg, selectedAd?.adId, selectedAd?.mapping?.cardId, channel, attachment, undefined, customerPhone.trim() || undefined, undefined, customerName.trim() || undefined);
-    if (data.session) setSession(data.session);
     setAttachment(null);
+    setLoading(true);
+    const payload = media ? { type: media.type, name: media.name, mimeType: media.mimeType, data: media.data } : undefined;
+    const data = await sendChat(sessionId, userMsg, selectedAd?.adId, selectedAd?.mapping?.cardId, channel, payload, undefined, customerPhone.trim() || undefined, undefined, customerName.trim() || undefined);
+    if (data.session) setSession(data.session);
     const reply = assistantMessage(data);
     setMessages((m) => (reply ? [...m, reply] : m));
     setLoading(false);
+    if (reply) scheduleNudge();
   }
 
   async function sendJson() {
@@ -299,6 +366,7 @@ export default function PlaygroundTab() {
       return;
     }
     setJsonError("");
+    clearNudgeTimer();
     setLoading(true);
     try {
       const data = await sendChat(sessionId, "", undefined, undefined, channel, undefined, undefined, undefined, webhook);
@@ -313,6 +381,7 @@ export default function PlaygroundTab() {
       if (reply) next.push(reply);
       setMessages((m) => [...m, ...next]);
       if (!data.error) setShowJsonModal(false);
+      if (reply) scheduleNudge();
     } catch (err) {
       setJsonError(err.message || "Could not send webhook.");
     } finally {
@@ -321,6 +390,7 @@ export default function PlaygroundTab() {
   }
 
   async function reset() {
+    clearNudgeTimer();
     await resetChat(sessionId);
     setSessionId(newSessionId());
     setMessages([]);
@@ -390,11 +460,13 @@ export default function PlaygroundTab() {
               <div key={i} className={m.role === "user" ? "chat-user" : "chat-assistant"}>
                 {m.role === "user" ? (
                   <>
-                    {m.attachment && <div className="chat-attachment">{m.attachment.type === "image" ? "Photo" : m.attachment.type}</div>}
+                    {m.attachment?.previewUrl && <img className="chat-media-preview" src={m.attachment.previewUrl} alt="" />}
+                    {m.attachment && !m.attachment.previewUrl && <div className="chat-attachment">{m.attachment.type}: {m.attachment.name || m.attachment.type}</div>}
                     {m.content && <div className="bubble-user"><ChatText text={m.content} /></div>}
                   </>
                 ) : (
                   <div className="chat-assistant-body">
+                    {m.nudge && <div className="chat-nudge-label">Follow-up</div>}
                     {m.content && <div className="bubble-assistant"><ChatText text={m.content} /></div>}
                     <ProductCarousel products={m.usedCatalogProducts} />
                   </div>
@@ -531,8 +603,9 @@ export default function PlaygroundTab() {
             <input className="input" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Riya" />
           </div>
           <div className="context-block">
-            <label className="field-label">{channel === "whatsapp" ? "WhatsApp number" : "Phone on file"}</label>
-            <input className="input" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="Optional" />
+            <label className="field-label">{channel === "whatsapp" ? "Test customer WhatsApp" : "Test customer phone"}</label>
+            <input className="input" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="7275724262" />
+            <p className="field-hint">This is the customer on the chat. Tyaani’s business WhatsApp is +91 96195 87978.</p>
           </div>
         </aside>
       </div>
